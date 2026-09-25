@@ -13,7 +13,7 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
     <application
-        android:label="123云盘"
+        android:label="云盘助手"
         android:icon="@mipmap/ic_launcher"
         android:theme="@style/AppTheme"
         android:allowBackup="false"
@@ -35,6 +35,6 @@
             android:name=".PanProvider"
             android:authorities="com.yunpan.mobile.pan"
             android:grantUriPermissions="true"
-            android:exported="true" />
+            android:exported="false" />
     </application>
 </manifest>

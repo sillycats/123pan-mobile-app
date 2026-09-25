@@ -44,8 +44,62 @@ sed -E "s/android:versionCode=\"[0-9]+\"/android:versionCode=\"$VERSION_CODE\"/;
     "$MAIN/AndroidManifest.xml" > "$W/AndroidManifest.xml"
 echo "=== injected manifest version ==="
 grep -E 'versionCode|versionName' "$W/AndroidManifest.xml"
+
+# 2.5) assets 加密：对 html/js/css 做异或混淆，防止静态特征提取
+#    每次构建前先还原 assets（避免二次加密），加密后 link，构建完成后还原
+python3 - "$MAIN/assets" <<'PYEOF'
+import os, sys
+adir = sys.argv[1]
+KEY = 0x5A
+# 先检测是否已加密：index.html 头应该是 <!DOCTYPE 或 <html
+need_decrypt = False
+idx = os.path.join(adir, 'index.html')
+with open(idx, 'rb') as f: head = f.read(20)
+if not head.startswith(b'<!DOCTYPE') and not head.startswith(b'<html'):
+    need_decrypt = True
+for root, dirs, files in os.walk(adir):
+    for f in files:
+        if f.endswith(('.html', '.js', '.css')):
+            fp = os.path.join(root, f)
+            with open(fp, 'rb') as fh: data = fh.read()
+            if need_decrypt:
+                data = bytes([b ^ KEY for b in data])
+            with open(fp, 'wb') as fh: fh.write(data)
+print(f'assets restored: encrypted={need_decrypt}')
+PYEOF
+
+# 加密 assets
+python3 - "$MAIN/assets" <<'PYEOF'
+import os, sys
+adir = sys.argv[1]
+KEY = 0x5A
+for root, dirs, files in os.walk(adir):
+    for f in files:
+        if f.endswith(('.html', '.js', '.css')):
+            fp = os.path.join(root, f)
+            with open(fp, 'rb') as fh: data = fh.read()
+            enc = bytes([b ^ KEY for b in data])
+            with open(fp, 'wb') as fh: fh.write(enc)
+            print(f'encrypted: {f}')
+PYEOF
+
 "$BT/aapt2" link -I "$ANDROID_JAR" --manifest "$W/AndroidManifest.xml" \
     -A "$MAIN/assets" -o "$W/base.apk" --java "$W/gen" --auto-add-overlay "$W/gateway.zip"
+
+# 构建完成后还原 assets 为明文，方便源码管理
+python3 - "$MAIN/assets" <<'PYEOF'
+import os, sys
+adir = sys.argv[1]
+KEY = 0x5A
+for root, dirs, files in os.walk(adir):
+    for f in files:
+        if f.endswith(('.html', '.js', '.css')):
+            fp = os.path.join(root, f)
+            with open(fp, 'rb') as fh: data = fh.read()
+            dec = bytes([b ^ KEY for b in data])
+            with open(fp, 'wb') as fh: fh.write(dec)
+print('assets restored to plaintext')
+PYEOF
 
 # 3) compile java
 find "$MAIN/java" -name '*.java' > "$W/sources.txt"

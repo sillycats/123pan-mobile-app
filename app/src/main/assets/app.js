@@ -1,4 +1,4 @@
-/* 123云盘移动端 SPA 逻辑
+/* 云盘助手移动端 SPA 逻辑
  * 通过 NativeBridge 调用原生网络层（复刻 123pan-open API）
  * 底部导航：文件 / 传输 / 我的
  */
@@ -3916,7 +3916,7 @@
   function renderDownloadDir() {
     var el = $('mine-dir-val');
     if (el) {
-      var cur = '123云盘';
+      var cur = '云盘助手';
       try { if (bridge && bridge.getDownloadSubDir) cur = bridge.getDownloadSubDir() || cur; } catch (e) {}
       el.textContent = 'Download/' + cur;
     }
@@ -3928,7 +3928,7 @@
         bridge.pickDownloadDir();
       } else {
         // 回退到输入框
-        var cur = '123云盘';
+        var cur = '云盘助手';
         try { cur = bridge.getDownloadSubDir() || cur; } catch (e) {}
         var val = prompt('输入下载子目录名（位于系统Download目录下）', cur);
         if (val === null) return;

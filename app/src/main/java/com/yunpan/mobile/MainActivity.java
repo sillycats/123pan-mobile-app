@@ -58,7 +58,7 @@ import java.util.concurrent.Executors;
 import java.util.zip.GZIPInputStream;
 
 /**
- * 123云盘移动端 (复刻 123pan-open 的 API 客户端能力)
+ * 云盘助手移动端 (复刻 123pan-open 的 API 客户端能力)
  *
  * 架构：
  *  - 原生网络层 HttpURLConnection 调用 123 云盘 API（复刻 123pan-open 端点）
@@ -74,7 +74,7 @@ public class MainActivity extends Activity {
     // （表现为两次扫描文件数不一致）。提升到 12 以覆盖递归遍历的并发峰值。
     private final ExecutorService executor = Executors.newFixedThreadPool(12);
     private SharedPreferences prefs;
-    private String downloadSubDir = "123云盘";
+    private String downloadSubDir = "云盘助手";
 
     private static final String PREF = "pan_prefs";
     private static final String KEY_TOKEN = "token";
@@ -151,20 +151,20 @@ public class MainActivity extends Activity {
 
     // ---- 自定义下载目录 ----
     public String getDownloadSubDir() {
-        return downloadSubDir == null ? "123云盘" : downloadSubDir;
+        return downloadSubDir == null ? "云盘助手" : downloadSubDir;
     }
 
     public void setDownloadSubDir(String dir) {
-        if (dir == null) dir = "123云盘";
+        if (dir == null) dir = "云盘助手";
         dir = dir.trim();
-        if (dir.isEmpty()) dir = "123云盘";
+        if (dir.isEmpty()) dir = "云盘助手";
         downloadSubDir = dir;
         if (prefs != null) {
             prefs.edit().putString("download_sub_dir", dir).apply();
         }
     }
 
-    // MediaStore 相对路径，如 "Download/123云盘"
+    // MediaStore 相对路径，如 "Download/云盘助手"
     public String downloadRelPath() {
         return Environment.DIRECTORY_DOWNLOADS + "/" + getDownloadSubDir();
     }
@@ -202,7 +202,7 @@ public class MainActivity extends Activity {
         webView = new WebView(this);
         setContentView(webView);
         prefs = getSharedPreferences(PREF, Context.MODE_PRIVATE);
-        downloadSubDir = prefs.getString("download_sub_dir", "123云盘");
+        downloadSubDir = prefs.getString("download_sub_dir", "云盘助手");
         loginuuid = prefs.getString("loginuuid", loginuuid);
 
         WebSettings ws = webView.getSettings();
@@ -334,12 +334,48 @@ public class MainActivity extends Activity {
 
         // 未登录：直接显示官方登录页（账号密码 / 验证码登录均在官方页完成，含安全滑块）
         // 已登录：加载本地 SPA 恢复会话
+        decryptAssets();
         String savedToken = prefs.getString(KEY_TOKEN, "");
         if (savedToken != null && !savedToken.isEmpty()) {
-            webView.loadUrl("file:///android_asset/index.html");
+            webView.loadUrl("file://" + getCacheDir().getAbsolutePath() + "/app/index.html");
         } else {
             webView.loadUrl(OFFICIAL_LOGIN_URL);
         }
+    }
+
+    // 解密 assets 中的 html/js/css 到 cacheDir
+    private void decryptAssets() {
+        try {
+            java.io.File outDir = new java.io.File(getCacheDir(), "app");
+            outDir.mkdirs();
+            byte KEY = 0x5A;
+            // 根目录文件
+            String[] rootFiles = {"index.html", "app.js", "style.css", "qrcode.min.js"};
+            for (String f : rootFiles) {
+                decryptOne(f, new java.io.File(outDir, f), KEY);
+            }
+            // lib目录
+            java.io.File libDir = new java.io.File(outDir, "lib");
+            libDir.mkdirs();
+            String[] libFiles = {"mammoth.browser.min.js", "pdf.min.js", "pdf.worker.min.js", "xlsx.full.min.js"};
+            for (String f : libFiles) {
+                decryptOne("lib/" + f, new java.io.File(libDir, f), KEY);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void decryptOne(String assetPath, java.io.File outFile, byte KEY) throws Exception {
+        java.io.InputStream is = getAssets().open(assetPath);
+        byte[] data = new byte[is.available()];
+        is.read(data);
+        is.close();
+        byte[] dec = new byte[data.length];
+        for (int i = 0; i < data.length; i++) dec[i] = (byte) (data[i] ^ KEY);
+        java.io.FileOutputStream fos = new java.io.FileOutputStream(outFile);
+        fos.write(dec);
+        fos.close();
     }
 
     private static String json(String s) {
@@ -423,7 +459,7 @@ public class MainActivity extends Activity {
         if (requestCode == DOWNLOAD_DIR_PICK_REQUEST) {
             if (resultCode != RESULT_OK || data == null || data.getData() == null) return;
             Uri treeUri = data.getData();
-            String dirName = "123云盘";
+            String dirName = "云盘助手";
             try {
                 // 从 treeUri 取最后一段作为目录名
                 String last = treeUri.getLastPathSegment();
@@ -596,7 +632,7 @@ public class MainActivity extends Activity {
             verifyMode = false;
             // 恢复默认UA
             webView.getSettings().setUserAgentString(null);
-            webView.loadUrl("file:///android_asset/index.html");
+            webView.loadUrl("file://" + getCacheDir().getAbsolutePath() + "/app/index.html");
             // 延迟通知前端刷新回收站列表
             handler.postDelayed(() -> {
                 webView.evaluateJavascript("try{window.__onVerifyDone&&window.__onVerifyDone();}catch(e){}", null);
@@ -651,7 +687,7 @@ public class MainActivity extends Activity {
             if (fname == null || fname.isEmpty()) fname = "download_" + System.currentTimeMillis();
             DownloadManager.Request req = new DownloadManager.Request(Uri.parse(url));
             req.setTitle(fname);
-            req.setDescription("123云盘下载");
+            req.setDescription("云盘助手下载");
             req.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
             req.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, getDownloadSubDir() + "/" + fname);
             DownloadManager dm = (DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE);
@@ -1318,7 +1354,7 @@ public class MainActivity extends Activity {
                 int idxStatus = c.getColumnIndex(DownloadManager.COLUMN_STATUS);
                 while (c.moveToNext()) {
                     String desc = c.getString(idxDesc);
-                    if (desc == null || !desc.contains("123云盘下载")) continue;
+                    if (desc == null || !desc.contains("云盘助手下载")) continue;
                     if (!first) sb.append(",");
                     first = false;
                     String title = c.getString(idxTitle);
@@ -3009,7 +3045,7 @@ public class MainActivity extends Activity {
             // 切回本地 SPA 主界面；onPageFinished 会注入 __restoreSession 恢复会话
             handler.post(() -> {
                 if (webView != null) {
-                    webView.loadUrl("file:///android_asset/index.html");
+                    webView.loadUrl("file://" + getCacheDir().getAbsolutePath() + "/app/index.html");
                 }
             });
         } catch (Exception e) {
