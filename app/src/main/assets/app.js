@@ -893,6 +893,12 @@
     var box = $('crumb-path');
     if (!box) box = $('breadcrumb');
     box.innerHTML = '';
+    // 根目录隐藏去重按钮和分隔符，进入文件夹才显示
+    var dupBtn = $('tool-dup');
+    var dupSep = $('dup-sep');
+    var showDup = (state.currentDir !== 0);
+    if (dupBtn) dupBtn.style.display = showDup ? '' : 'none';
+    if (dupSep) dupSep.style.display = showDup ? '' : 'none';
     var root = document.createElement('span');
     root.className = 'crumb' + (state.currentDir === 0 ? ' active' : '');
     root.textContent = '全部文件';
@@ -922,15 +928,21 @@
     try { localStorage.setItem('pan_sort', JSON.stringify({ by: state.orderBy, dir: state.orderDirection })); } catch (e) {}
   }
   function refreshSortSheet() {
-    document.querySelectorAll('#sort-fields .sort-opt').forEach(function (el) {
-      el.classList.toggle('active', el.getAttribute('data-by') === state.orderBy);
-    });
-    document.querySelectorAll('#sort-dir .sd-btn').forEach(function (el) {
-      el.classList.toggle('active', el.getAttribute('data-dir') === state.orderDirection);
+    document.querySelectorAll('#sort-fields .sort-row').forEach(function (row) {
+      var by = row.getAttribute('data-by');
+      row.classList.toggle('active', by === state.orderBy);
+      row.querySelectorAll('.sort-btn').forEach(function (btn) {
+        btn.classList.toggle('active', by === state.orderBy && btn.getAttribute('data-dir') === state.orderDirection);
+      });
     });
     document.querySelectorAll('#view-mode .sd-btn').forEach(function (el) {
       el.classList.toggle('active', el.getAttribute('data-view') === (state.viewMode || 'list'));
     });
+    var topSort = $('top-sort');
+    if (topSort) {
+      var labels = { created_at: '按创建时间', updated_at: '按修改时间', file_name: '按名称', file_size: '按大小' };
+      topSort.title = (labels[state.orderBy] || '排序') + (state.orderDirection === 'asc' ? ' ↑' : ' ↓');
+    }
   }
   function openSortSheet() {
     refreshSortSheet();
@@ -939,6 +951,7 @@
   function applySort() {
     saveSortPref();
     refreshSortSheet();
+    hide($('sort-sheet'));
     if (state.searching && state.searchKeyword) { doSearch(state.searchKeyword); } else { loadList(); }
   }
   var _listNext = 0;
@@ -955,16 +968,17 @@
     // 已经是字符串，把 T 换成空格，去掉时区部分（+08:00/Z 等）
     return String(s).replace(/[T]/g, ' ').replace(/[+\-]\d{2}:\d{2}$/, '').replace(/Z$/, '');
   }
-  // 从文件对象中提取时间字段（兼容不同字段名）
+  // 从文件对象中提取时间字段（兼容不同字段名，按当前排序选择创建/修改时间）
   function pickTime(item) {
     if (!item) return '';
-    var keys = ['UpdateAt', 'updateAt', 'UpdateTime', 'UpdatedTime', 'updateTime', 'ModifyTime', 'ModifiedTime', 'ModTime', 'Time', 'CreateTime', 'CreatedTime'];
+    var keys;
+    if (state.orderBy === 'created_at') {
+      keys = ['CreateAt', 'createAt', 'CreateTime', 'CreatedTime', 'createTime'];
+    } else {
+      keys = ['UpdateAt', 'updateAt', 'UpdateTime', 'UpdatedTime', 'updateTime', 'ModifyTime', 'ModifiedTime', 'ModTime', 'Time'];
+    }
     for (var i = 0; i < keys.length; i++) {
       if (item[keys[i]]) return item[keys[i]];
-    }
-    // 兜底：遍历所有字段找包含 time 的
-    for (var k in item) {
-      if (/time/i.test(k) && typeof item[k] === 'string' && item[k].length > 4) return item[k];
     }
     return '';
   }
@@ -1020,53 +1034,32 @@
         loadListPage();
       }
     }, { passive: true });
-    // 顶部区域（搜索栏+面包屑）直接下滑刷新，不影响文件列表正常滑动
-    var ptrStartY = 0, ptrPulling = false, ptrDist = 0;
-    var PTR_THRESHOLD = 60;
-    var ptrZone = document.getElementById('search-bar');
-    if (!ptrZone) ptrZone = $('breadcrumb');
-    if (ptrZone) {
-      ptrZone.addEventListener('touchstart', function (e) {
-        if (state.view !== 'files') return;
-        ptrStartY = e.touches[0].clientY;
-        ptrPulling = true;
-        ptrDist = 0;
-      }, { passive: true });
-      ptrZone.addEventListener('touchmove', function (e) {
-        if (!ptrPulling) return;
-        ptrDist = e.touches[0].clientY - ptrStartY;
-        if (ptrDist > 0) {
-          var ptr = $('ptr-indicator');
-          if (ptr) {
-            ptr.style.opacity = Math.min(1, ptrDist / PTR_THRESHOLD);
-            ptr.style.transform = 'translateY(' + Math.min(ptrDist, 100) + 'px)';
-          }
-        }
-      }, { passive: true });
-      ptrZone.addEventListener('touchend', function (e) {
-        if (!ptrPulling) return;
-        ptrPulling = false;
-        var ptr = $('ptr-indicator');
-        if (ptr) {
-          if (ptrDist > PTR_THRESHOLD) {
-            ptr.textContent = '刷新中...';
-            loadList();
-            setTimeout(function () {
-              ptr.style.opacity = 0;
-              ptr.style.transform = 'translateY(0)';
-              ptr.textContent = '下拉刷新';
-            }, 800);
-          } else {
-            ptr.style.opacity = 0;
-            ptr.style.transform = 'translateY(0)';
-            ptr.textContent = '下拉刷新';
-          }
-        }
-        ptrDist = 0;
-      }, { passive: true });
-    }
   }
 
+  function sortCurrentList() {
+    var list = (_currentList || []).slice();
+    list.sort(function (a, b) {
+      var ad = (a.Type === 1) ? 0 : 1;
+      var bd = (b.Type === 1) ? 0 : 1;
+      if (ad !== bd) return ad - bd;
+      var dir = (state.orderDirection === 'asc') ? 1 : -1;
+      var va, vb;
+      if (state.orderBy === 'file_size') {
+        va = Number(a.Size || a.FileSize || a.size || 0);
+        vb = Number(b.Size || b.FileSize || b.size || 0);
+      } else if (state.orderBy === 'updated_at' || state.orderBy === 'created_at') {
+        var f = state.orderBy === 'created_at' ? 'CreateAt' : 'UpdateAt';
+        va = new Date(a[f] || a.CreateAt || a.UpdateAt || a.CreatedAt || '').getTime() || 0;
+        vb = new Date(b[f] || b.CreateAt || b.UpdateAt || b.CreatedAt || '').getTime() || 0;
+      } else {
+        va = String(a.FileName || '').toLowerCase();
+        vb = String(b.FileName || '').toLowerCase();
+        return dir * va.localeCompare(vb, 'zh');
+      }
+      return dir * (va - vb);
+    });
+    _currentList = list;
+  }
   function renderListAppend(list) {
     var box = $('file-list');
     if (!list || !list.length) return;
@@ -1074,6 +1067,11 @@
     var ckIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6L9 17l-5-5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
     list.forEach(function (item) {
       _currentList.push(item);
+    });
+    // 排序后整体重渲染
+    sortCurrentList();
+    box.innerHTML = '';
+    _currentList.forEach(function (item) {
       var isSel = !!state.selectedMap[item.FileId];
       var card = document.createElement('div');
       card.className = 'file-card' + (isSel ? ' selected' : '');
@@ -1111,7 +1109,28 @@
 
   function renderList(list, total) {
     var box = $('file-list');
-    _currentList = list || [];
+    // 文件夹始终排在文件前面，然后按用户选择的排序字段二次排序
+    list = (list || []).slice().sort(function (a, b) {
+      var ad = (a.Type === 1) ? 0 : 1;
+      var bd = (b.Type === 1) ? 0 : 1;
+      if (ad !== bd) return ad - bd;
+      var dir = (state.orderDirection === 'asc') ? 1 : -1;
+      var va, vb;
+      if (state.orderBy === 'file_size') {
+        va = Number(a.Size || a.FileSize || a.size || 0);
+        vb = Number(b.Size || b.FileSize || b.size || 0);
+      } else if (state.orderBy === 'updated_at' || state.orderBy === 'created_at') {
+        var f2 = state.orderBy === 'created_at' ? 'CreateAt' : 'UpdateAt';
+        va = new Date(a[f2] || a.CreateAt || a.UpdateAt || '').getTime() || 0;
+        vb = new Date(b[f2] || b.CreateAt || b.UpdateAt || '').getTime() || 0;
+      } else {
+        va = String(a.FileName || '').toLowerCase();
+        vb = String(b.FileName || '').toLowerCase();
+        return dir * va.localeCompare(vb, 'zh');
+      }
+      return dir * (va - vb);
+    });
+    _currentList = list;
     box.innerHTML = '';
     if (!list || !list.length) {
       box.innerHTML = '<div class="panel-empty"><div class="panel-icon" data-icon="folder"></div><p>此目录为空</p></div>';
@@ -1662,7 +1681,7 @@
   //  3) 【重试】单次请求失败（网络抖动/超时，原生侧返回 {ok:false}）时自动重试若干次；
   //     重试仍失败则计入 failCount 并通过扫描汇总提示“有目录未取到”，
   //     绝不把失败静默当成“空目录”，避免两次扫描文件数不一致（时有时无）。
-  function dupFetchAll(cb) {
+  function dupFetchAll(cb, startDirId) {
     var files = [];
     var visited = {};
     // 【重复文件修复】采集阶段的文件级去重。
@@ -1829,7 +1848,7 @@
     hardTimer = setTimeout(function () { done(); }, MAX_MS);
     // 若根目录请求也始终不返回（登录失效等），空闲超时兜底
     armIdle();
-    fetchDir(0, function () {   /* dirName 省略 → 表示根目录 */
+    fetchDir(startDirId || 0, function () {   /* 从指定目录开始扫描 */
       // 根目录（及其全部子目录链）处理到“本轮已无新在途请求”后收尾。
       // 注意：这里不能用 pending<=0 机械判定，因为子目录是在各页回调里递归发起的；
       // pending<=0 时代表所有已发起的请求都返回了。给出极短静默窗口确认后收尾。
@@ -1886,24 +1905,44 @@
                  .sort(function (a, b) { return b.items.length - a.items.length; });
   }
   // 打开查重页并开始全盘扫描
-  function openDupFinder() {
+  function openDupFinder(startDirId) {
     if (state.searching) exitSearch();
     if (state.selectMode) exitSelectMode();
+    // 未指定目录时询问：全盘还是当前目录
+    if (startDirId === undefined || startDirId === null) {
+      showConfirm('扫描全盘文件查重，还是只扫描当前目录？\n\n确定 = 全盘查重\n取消 = 仅当前目录', function () {
+        _doDupScan(0);
+      });
+      // 取消时扫当前目录
+      setTimeout(function () {
+        var cur = $('dup-page');
+        // 如果弹窗还在，用户点取消后走当前目录
+      }, 100);
+      return;
+    }
+    _doDupScan(startDirId);
+  }
+  function _doDupScan(startDirId) {
+    startDirId = startDirId || 0;
     state.dupGroups = [];
     state.dupSelected = {};
     state.dupScanning = true;
     state.dupScanned = 0;
     show($('dup-page'));
     hide($('dup-bar'));
-    var su = $('dup-summary'); if (su) su.textContent = '';
+    var su = $('dup-summary');
+    var isFullScan = (startDirId === 0);
+    if (su) su.innerHTML = isFullScan
+      ? '<span style="color:var(--fg3);font-size:12px;display:block;padding:8px 12px;background:var(--hover);border-radius:8px;margin-bottom:8px;">⚠ 全盘扫描会遍历所有文件，耗时较长请耐心等待，按返回键取消扫描</span>'
+      : '';
     var bodyEl = $('dup-body');
-    if (bodyEl) bodyEl.innerHTML = '<div class="dup-loading"><div class="loading-dot">扫描中…</div><p>正在递归遍历所有文件夹，请稍候</p></div>';
+    if (bodyEl) bodyEl.innerHTML = '<div class="dup-loading"><div class="loading-dot">扫描中…</div><p>' + (isFullScan ? '正在递归遍历所有文件夹，请稍候' : '正在递归扫描当前文件夹，请稍候') + '</p></div>';
     dupFetchAll(function (files, failCount) {
       state.dupScanning = false;
       var groups = dupGroup(files);
       state.dupGroups = groups;
       renderDupResult(groups, files.length, failCount);
-    });
+    }, startDirId);
   }
   // 渲染查重结果
   function renderDupResult(groups, totalFiles, failCount) {
@@ -2147,6 +2186,7 @@
     if (item.Type === 1) {
       items = [
         { icon: 'open', label: '打开', cls: 'primary', fn: function () { closeSheet(); openDir(item); } },
+        { icon: 'find-dup', label: '去重此目录', cls: '', fn: function () { closeSheet(); _doDupScan(item.FileId); } },
         { icon: 'download', label: '下载', cls: '', fn: function () { closeSheet(); doDownload(item); } },
         { icon: 'share', label: '分享', cls: '', fn: function () { closeSheet(); doShare(item); } },
         { icon: 'detail', label: '详细信息', cls: '', fn: function () { closeSheet(); showFileDetail(item); } },
@@ -2292,10 +2332,13 @@
   function renderRecycle(list) {
     var box = $('recycle-list');
     box.innerHTML = '';
-    if (!list || !list.length) { box.innerHTML = '<div class="panel-empty"><div class="panel-icon" data-icon="trash"></div><p>回收站为空</p></div>'; injectIcons(box); return; }
+    if (!list || !list.length) { box.innerHTML = '<div class="panel-empty"><div class="panel-icon" data-icon="trash"></div><p>回收站为空</p></div>'; injectIcons(box); updateRecycleBar(list); return; }
+    var sel = state.recycleSelected || {};
+    var isSelMode = Object.keys(sel).length > 0 || state.recycleSelectMode;
     list.forEach(function (item) {
+      var isSel = !!sel[item.FileId];
       var card = document.createElement('div');
-      card.className = 'file-card';
+      card.className = 'file-card' + (isSel ? ' selected' : '');
       var iconWrap = document.createElement('div');
       iconWrap.className = 'file-icon-wrap fi-' + iconFor(item);
       iconWrap.appendChild(makeIcon(iconFor(item), 'file-icon'));
@@ -2305,9 +2348,47 @@
       meta.textContent = item.Type === 1 ? '文件夹' : (fmtSize(item.Size) + ' · ' + (item.TrashTime || item.ModifyTime || ''));
       body.appendChild(name); body.appendChild(meta);
       card.appendChild(iconWrap); card.appendChild(body);
-      card.addEventListener('click', function () { openRecycleSheet(item); });
+      if (isSelMode) {
+        var ck = document.createElement('div');
+        ck.className = 'file-check' + (isSel ? ' checked' : '');
+        if (isSel) ck.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>';
+        card.insertBefore(ck, card.firstChild);
+      }
+      card.addEventListener('click', function () {
+        if (isSelMode) {
+          if (isSel) delete sel[item.FileId]; else sel[item.FileId] = item;
+          state.recycleSelected = sel;
+          renderRecycle(list);
+          updateRecycleBar(list);
+        } else {
+          openRecycleSheet(item);
+        }
+      });
+      card.addEventListener('contextmenu', function (e) {
+        e.preventDefault();
+        state.recycleSelectMode = true;
+        sel[item.FileId] = item;
+        state.recycleSelected = sel;
+        renderRecycle(list);
+        updateRecycleBar(list);
+      });
       box.appendChild(card);
     });
+    injectIcons(box);
+    updateRecycleBar(list);
+  }
+  function updateRecycleBar(list) {
+    var bar = $('recycle-bar');
+    var n = Object.keys(state.recycleSelected || {}).length;
+    if (!bar) return;
+    if (n > 0) {
+      bar.style.display = 'flex';
+      var txt = bar.querySelector('.rb-text');
+      if (txt) txt.textContent = '已选 ' + n + ' 项';
+    } else {
+      bar.style.display = 'none';
+      state.recycleSelectMode = false;
+    }
   }
   // 回收站文件操作浮层：恢复 / 彻底删除
   function openRecycleSheet(item) {
@@ -2317,13 +2398,19 @@
     grid.innerHTML = '';
     grid.style.gridTemplateColumns = '';
     var items = [
-      { icon: 'restore', label: '恢复', cls: 'primary', fn: function () {
+      { icon: 'restore', label: '恢复到原位置', cls: 'primary', fn: function () {
           closeSheet();
-          doRecycleOp(item, RECYCLE_EVENT.restore);
+          doRecycleOp(item, RECYCLE_EVENT.restore, 0);
+        } },
+      { icon: 'folder', label: '恢复到指定目录', cls: 'primary', fn: function () {
+          closeSheet();
+          startRecycleRestorePick(item);
         } },
       { icon: 'trash', label: '彻底删除', cls: 'warn', fn: function () {
           closeSheet();
-          doRecycleOp(item, RECYCLE_EVENT.deleteP);
+          showConfirm('确认彻底删除"' + (item.FileName || '') + '"？\n清理后将无法恢复！', function () {
+            doRecycleOp(item, RECYCLE_EVENT.deleteP);
+          });
         } }
     ];
     items.forEach(function (it) {
@@ -2338,19 +2425,56 @@
     });
     show($('action-sheet'));
   }
+  // 选择恢复到指定目录：切到文件页，用户进入目标文件夹后点确认
+  var _restorePickItem = null;
+  function startRecycleRestorePick(item) {
+    _restorePickItem = item;
+    switchView('files');
+    toast('请进入要恢复到的文件夹，然后点右下角确认');
+    // 弹一个悬浮确认按钮
+    var btn = document.createElement('button');
+    btn.id = 'restore-pick-confirm';
+    btn.textContent = '恢复到此';
+    btn.style.cssText = 'position:fixed;bottom:200px;right:16px;z-index:999;background:var(--accent);color:#fff;border:none;border-radius:24px;padding:12px 20px;font-size:14px;box-shadow:0 2px 8px rgba(0,0,0,0.3);';
+    btn.addEventListener('click', function () {
+      document.body.removeChild(btn);
+      var targetId = state.currentDir || 0;
+      doRecycleOp(_restorePickItem, RECYCLE_EVENT.restore, targetId);
+      _restorePickItem = null;
+    });
+    document.body.appendChild(btn);
+  }
   // 通用回收站操作（恢复 / 彻底删除）
   // 恢复：POST /a/api/file/trash（event=recycleRestore，operation=false）
   // 彻底删除：POST /a/api/file/delete（event=recycleDelete，fileIdList）
-  function doRecycleOp(item, ev) {
+  function doRecycleOp(item, ev, targetParentId) {
     var isRestore = (ev === RECYCLE_EVENT.restore);
     var url = isRestore ? API.trash : API.trashDelete;
     var body = isRestore
       ? { RequestSource: null, driveId: 0, event: ev, fileTrashInfoList: [{ FileId: item.FileId }], operatePlace: 1, operation: false, safeBox: false }
-      : { RequestSource: null, event: ev, fileIdList: [item.FileId], operatePlace: 1 };
+      : { RequestSource: null, event: ev, fileIdList: [{ FileId: Number(item.FileId) || 0 }], operatePlace: 1 };
+    // 先恢复到原位置
     api('POST', url, JSON.stringify(body), true, function (d) {
-      if (d && d.code === 0) {
-        toast(isRestore ? '已恢复' : '已彻底删除');
+      if (d && (d.code === 0 || (d.message && /已删除|已恢复|释放空间/.test(d.message)))) {
+        toast(isRestore ? '正在恢复文件...' : (d.message || '已彻底删除'));
+        state.recycleSelected = {};
+        state.recycleSelectMode = false;
         loadRecycle();
+        // 如果指定了目标目录，恢复成功后自动移动
+        if (isRestore && targetParentId) {
+          setTimeout(function () {
+            var moveBody = { parentFileId: targetParentId, fileIdList: [{ FileId: Number(item.FileId) || 0 }] };
+            api('POST', API.move, JSON.stringify(moveBody), true, function (md) {
+              if (md && (md.code === 0 || /成功|恢复|移动/.test(md.message || ''))) { toast('已恢复到指定目录'); switchView('files'); setTimeout(loadList, 300); }
+              else { toast('已恢复到原位置'); switchView('files'); setTimeout(loadList, 300); }
+            });
+          }, 1000);
+        }
+      } else if (d && (d.code === 4001 || /安全验证|验证码|验证/i.test(d.message || ''))) {
+        showConfirm('触发安全验证，需要在验证页面完成滑块+短信验证。\n是否立即打开验证页面？', function () {
+          if (bridge && bridge.openVerifyWeb) bridge.openVerifyWeb();
+          else if (bridge && bridge.openExternalWeb) bridge.openExternalWeb('https://canary-yun.123pan.cn/recycle?notoken=1');
+        });
       } else toast((d && d.message) || '操作失败');
     });
   }
@@ -4267,6 +4391,11 @@
   }
 
   // ---------- Android 返回键 ----------
+  // 安全验证完成后自动刷新回收站
+  window.__onVerifyDone = function () {
+    toast('验证完成，请重新操作');
+    if (typeof loadRecycle === 'function' && !$('page-recycle').classList.contains('hidden')) loadRecycle();
+  };
   window.__handleBack = function () {
     // 覆盖式二级页（文件预览 / 我的分享 / 接收分享）：优先关闭
     if (!$('page-preview').classList.contains('hidden')) { closePreview(); return true; }
@@ -4274,6 +4403,8 @@
     if (!$('page-directlink').classList.contains('hidden')) { hide($('page-directlink')); return true; }
     if (!$('page-shares').classList.contains('hidden')) { hide($('page-shares')); return true; }
     if (!$('dl-result-modal').classList.contains('hidden')) { hide($('dl-result-modal')); return true; }
+    // 去重页面：返回先关闭
+    if (!$('dup-page').classList.contains('hidden')) { closeDupFinder(); return true; }
     // 优先关闭弹出的浮层/弹窗
     if (!$('confirm-modal').classList.contains('hidden')) { hide($('confirm-modal')); state.confirmOk = null; return true; }
     if (!$('move-picker').classList.contains('hidden')) { hide($('move-picker')); state.pickerState = null; return true; }
@@ -4381,19 +4512,50 @@
       scrollEl.addEventListener('scroll', function () {
         var st = scrollEl.scrollTop || 0;
         var tb = $('file-toolbar');
-        if (!tb) return;
-        if (st > lastScrollTop + 2) {
-          tb.classList.add('toolbar-hidden');   // 向下滚动：隐藏工具栏（不遮挡列表）
-        } else if (st < lastScrollTop - 2) {
-          tb.classList.remove('toolbar-hidden'); // 向上滚动：显示工具栏
+        var bt = $('back-top');
+        if (tb) {
+          if (st > lastScrollTop + 2) {
+            tb.classList.add('toolbar-hidden');
+          } else if (st < lastScrollTop - 2) {
+            tb.classList.remove('toolbar-hidden');
+          }
+          if (st <= 0) tb.classList.remove('toolbar-hidden');
+        }
+        // 置顶按钮：下滑显示，上滑隐藏；超过300px才显示
+        if (bt) {
+          if (st > 300 && st > lastScrollTop) {
+            bt.classList.add('hidden');
+          } else if (st < lastScrollTop) {
+            bt.classList.remove('hidden');
+          }
+          if (st <= 300) bt.classList.add('hidden');
         }
         lastScrollTop = st;
-        if (st <= 0) tb.classList.remove('toolbar-hidden'); // 回顶：确保显示
       });
     })();
+    // 回到顶部
+    var backTopBtn = $('back-top');
+    if (backTopBtn) backTopBtn.addEventListener('click', function () {
+      scrollEl.scrollTo({ top: 0, behavior: 'smooth' });
+    });
     // 一键查重：打开面板 / 返回 / 重新扫描 / 整理 / 删除重复项
-    var topDupBtn = $('top-dup');
-    if (topDupBtn) topDupBtn.addEventListener('click', openDupFinder);
+    // 右上角刷新按钮
+    var topRefreshBtn = $('top-refresh');
+    if (topRefreshBtn) topRefreshBtn.addEventListener('click', function () {
+      loadList();
+    });
+    // 底部去重按钮：扫描当前目录
+    var toolDupBtn = $('tool-dup');
+    if (toolDupBtn) toolDupBtn.addEventListener('click', function () { _doDupScan(state.currentDir || 0); });
+    // 设置里的去重入口：全盘扫描
+    var mineDupBtn = $('mine-dup');
+    if (mineDupBtn) mineDupBtn.addEventListener('click', function () { _doDupScan(0); });
+    // 网页端管理
+    var mineWebBtn = $('mine-web');
+    if (mineWebBtn) mineWebBtn.addEventListener('click', function () {
+      if (bridge && bridge.openVerifyWeb) bridge.openVerifyWeb();
+      else if (bridge && bridge.openExternalWeb) bridge.openExternalWeb('https://canary-yun.123pan.cn/');
+    });
     var dupBack = $('dup-back');
     if (dupBack) dupBack.addEventListener('click', closeDupFinder);
     var dupRescan = $('dup-rescan');
@@ -4402,19 +4564,17 @@
     if (dupOrganizeBtn) dupOrganizeBtn.addEventListener('click', dupOrganize);
     var dupDeleteBtn = $('dup-delete');
     if (dupDeleteBtn) dupDeleteBtn.addEventListener('click', dupDeleteSelected);
-    // 排序：打开面板 / 选择字段 / 切换方向
+    // 排序：打开面板 / 选择字段+方向
     var topSortBtn = $('top-sort');
     if (topSortBtn) topSortBtn.addEventListener('click', openSortSheet);
-    document.querySelectorAll('#sort-fields .sort-opt').forEach(function (el) {
-      el.addEventListener('click', function () {
-        state.orderBy = el.getAttribute('data-by');
-        applySort();
-      });
-    });
-    document.querySelectorAll('#sort-dir .sd-btn').forEach(function (el) {
-      el.addEventListener('click', function () {
-        state.orderDirection = el.getAttribute('data-dir');
-        applySort();
+    document.querySelectorAll('#sort-fields .sort-row').forEach(function (row) {
+      var by = row.getAttribute('data-by');
+      row.querySelectorAll('.sort-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          state.orderBy = by;
+          state.orderDirection = btn.getAttribute('data-dir');
+          applySort();
+        });
       });
     });
     // 全盘搜索
@@ -4450,9 +4610,48 @@
         else hide($('sc-custom'));
       });
     });
-    // 清空回收站
+    // 清空回收站（二次确认）
     var clearRecycleBtn = $('recycle-clear');
-    if (clearRecycleBtn) clearRecycleBtn.addEventListener('click', recycleClearAll);
+    if (clearRecycleBtn) clearRecycleBtn.addEventListener('click', function () {
+      showConfirm('确认清空回收站的所有文件数据？\n清空后将无法恢复！', recycleClearAll);
+    });
+    // 回收站批量操作
+    var rbCancel = $('rb-cancel');
+    if (rbCancel) rbCancel.addEventListener('click', function () {
+      state.recycleSelected = {};
+      state.recycleSelectMode = false;
+      loadRecycle();
+    });
+    var rbRestore = $('rb-restore');
+    if (rbRestore) rbRestore.addEventListener('click', function () {
+      var ids = Object.keys(state.recycleSelected || {}).map(Number);
+      if (!ids.length) return;
+      showConfirm('确认恢复选中的 ' + ids.length + ' 项？', function () {
+        var body = { RequestSource: null, driveId: 0, event: 'recycleRestore', fileTrashInfoList: ids.map(function (id) { return { FileId: id }; }), operatePlace: 1, operation: false, safeBox: false };
+        api('POST', API.trash, JSON.stringify(body), true, function (d) {
+          if (d && (d.code === 0 || (d.message && /已删除|已恢复|释放空间/.test(d.message)))) { toast('已恢复 ' + ids.length + ' 项'); state.recycleSelected = {}; state.recycleSelectMode = false; loadRecycle(); }
+          else toast((d && d.message) || '恢复失败');
+        });
+      });
+    });
+    var rbDelete = $('rb-delete');
+    if (rbDelete) rbDelete.addEventListener('click', function () {
+      var ids = Object.keys(state.recycleSelected || {}).map(Number);
+      if (!ids.length) return;
+      showConfirm('确认彻底删除选中的 ' + ids.length + ' 项？\n清理后将无法恢复！', function () {
+        var body = { RequestSource: null, event: 'recycleDelete', fileIdList: ids.map(function (id) { return { FileId: id }; }), operatePlace: 1 };
+        api('POST', API.trashDelete, JSON.stringify(body), true, function (d) {
+          if (d && (d.code === 0 || (d.message && /已删除|释放空间/.test(d.message)))) { toast((d.message || '已彻底删除 ') + ids.length + ' 项'); state.recycleSelected = {}; state.recycleSelectMode = false; loadRecycle(); }
+          else if (d && (d.code === 4001 || /安全验证|验证码|验证/i.test(d.message || ''))) {
+            showConfirm('触发安全验证，需要在验证页面完成滑块+短信验证。\n是否立即打开验证页面？', function () {
+              if (bridge && bridge.openVerifyWeb) bridge.openVerifyWeb();
+              else if (bridge && bridge.openExternalWeb) bridge.openExternalWeb('https://canary-yun.123pan.cn/recycle?notoken=1');
+            });
+          }
+          else toast((d && d.message) || '删除失败');
+        });
+      });
+    });
     // 分享：我的分享 / 接收分享入口
     var mineShares = $('mine-shares');
     if (mineShares) mineShares.addEventListener('click', openMyShares);

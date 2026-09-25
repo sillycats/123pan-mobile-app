@@ -36,9 +36,8 @@
         <div id="breadcrumb" style="display:flex;align-items:center;gap:8px;">
           <span id="top-sort" data-icon="sort" title="排序" style="flex:0 0 auto;color:var(--fg3);padding:4px;"></span>
           <div id="crumb-path" style="flex:1;min-width:0;"></div>
-          <span id="top-dup" data-icon="find-dup" title="一键查重" style="flex:0 0 auto;color:var(--fg3);padding:4px;"></span>
+          <span id="top-refresh" data-icon="refresh" title="刷新" style="flex:0 0 auto;color:var(--fg3);padding:4px;cursor:pointer;"></span>
         </div>
-        <div id="ptr-indicator" style="position:fixed;top:0;left:0;right:0;text-align:center;padding:8px;color:var(--fg3);font-size:13px;opacity:0;z-index:100;background:var(--bg);transition:opacity .2s;">下拉刷新</div>
         <div id="file-list"></div>
         <!-- 底部工具栏：整理 / 上传 / 新建 -->
         <div id="file-toolbar">
@@ -52,6 +51,10 @@
           <div class="tool-sep"></div>
           <div class="tool-btn" id="tool-newfolder" data-tool="newfolder">
             <span class="tool-icon" data-icon="folder-plus"></span><span>新建</span>
+          </div>
+          <div class="tool-sep" id="dup-sep"></div>
+          <div class="tool-btn" id="tool-dup" data-tool="dup">
+            <span class="tool-icon" data-icon="find-dup"></span><span>去重</span>
           </div>
         </div>
         <!-- 多选（整理）操作栏 -->
@@ -86,6 +89,14 @@
           <button id="recycle-clear" class="recycle-clear-btn">清空</button>
         </div>
         <div id="recycle-list"></div>
+        <div id="recycle-bar" class="select-bar" style="display:none">
+          <span class="rb-text">已选 0 项</span>
+          <div class="rb-btns">
+            <button id="rb-restore" class="rb-btn">恢复</button>
+            <button id="rb-delete" class="rb-btn rb-danger">彻底删除</button>
+            <button id="rb-cancel" class="rb-btn">取消</button>
+          </div>
+        </div>
         <div class="panel-empty" id="recycle-empty">
           <div class="panel-icon" data-icon="trash"></div>
           <p>回收站为空</p>
@@ -110,6 +121,10 @@
         <div class="mine-item mine-item-btn" id="mine-shares"><span class="mine-label"><span class="mi-icon" data-icon="share"></span>我的分享</span><span class="mine-arrow">›</span></div>
         <div class="mine-item mine-item-btn" id="mine-receive"><span class="mine-label"><span class="mi-icon" data-icon="link"></span>接收分享</span><span class="mine-arrow">›</span></div>
         <div class="mine-item mine-item-btn" id="mine-directlink"><span class="mine-label"><span class="mi-icon" data-icon="link"></span>直链解析</span><span class="mine-arrow">›</span></div>
+
+        <div class="mine-section-title">文件管理</div>
+        <div class="mine-item mine-item-btn" id="mine-dup"><span class="mine-label"><span class="mi-icon" data-icon="find-dup"></span>全盘文件去重</span><span class="mine-arrow">›</span></div>
+        <div class="mine-item mine-item-btn" id="mine-web"><span class="mine-label"><span class="mi-icon" data-icon="hdd"></span>网页端管理</span><span class="mine-arrow">›</span></div>
 
         <div class="mine-section-title">偏好设置</div>
         <div class="mine-item mine-item-btn" id="mine-theme"><span class="mine-label"><span class="mi-icon" data-icon="sun"></span>主题模式</span><span class="mine-val" id="theme-val">跟随系统</span><span class="mine-arrow">›</span></div>
@@ -339,18 +354,38 @@
 <div id="sort-sheet" class="sheet hidden">
   <div class="sheet-mask" data-close></div>
   <div class="sheet-panel">
-    <div class="sheet-title">排序方式</div>
-    <div class="sort-opts" id="sort-fields">
-      <div class="sort-opt" data-by="file_name"><span>文件名</span></div>
-      <div class="sort-opt" data-by="file_size"><span>大小</span></div>
-      <div class="sort-opt" data-by="updated_at"><span>修改时间</span></div>
-      <div class="sort-opt" data-by="file_id"><span>默认排序</span></div>
+    <div class="sheet-head">
+      <div class="sheet-title">排序方式</div>
+      <div class="sheet-close" data-close>✕</div>
     </div>
-    <div class="sort-dir-row">
-      <span>排序方向</span>
-      <div class="sort-dir" id="sort-dir">
-        <button class="sd-btn" data-dir="asc">升序</button>
-        <button class="sd-btn" data-dir="desc">降序</button>
+    <div class="sort-rows" id="sort-fields">
+      <div class="sort-row" data-by="created_at">
+        <div class="sort-label">按创建时间排序</div>
+        <div class="sort-btns">
+          <button class="sort-btn" data-dir="desc">最新</button>
+          <button class="sort-btn" data-dir="asc">最旧</button>
+        </div>
+      </div>
+      <div class="sort-row" data-by="updated_at">
+        <div class="sort-label">按修改时间排序</div>
+        <div class="sort-btns">
+          <button class="sort-btn" data-dir="desc">最新</button>
+          <button class="sort-btn" data-dir="asc">最旧</button>
+        </div>
+      </div>
+      <div class="sort-row" data-by="file_name">
+        <div class="sort-label">按文件名称排序</div>
+        <div class="sort-btns">
+          <button class="sort-btn" data-dir="asc">A-Z</button>
+          <button class="sort-btn" data-dir="desc">Z-A</button>
+        </div>
+      </div>
+      <div class="sort-row" data-by="file_size">
+        <div class="sort-label">按文件大小排序</div>
+        <div class="sort-btns">
+          <button class="sort-btn" data-dir="asc">升序</button>
+          <button class="sort-btn" data-dir="desc">降序</button>
+        </div>
       </div>
     </div>
   </div>
@@ -471,6 +506,10 @@
   <symbol id="i-find-dup" viewBox="0 0 24 24"><rect x="3" y="3" width="12" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><rect x="9" y="9" width="12" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
   <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
 </svg>
+
+<button id="back-top" class="back-top hidden" title="回到顶部">
+  <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 15l-6-6-6 6"/></svg>
+</button>
 
 <script src="qrcode.min.js"></script>
 <script src="app.js"></script>

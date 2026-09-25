@@ -660,13 +660,15 @@ svg { display: block; }
 }
 .sort-opt.active { background: var(--accent-bg); border-color: var(--accent); color: var(--accent); font-weight: 600; }
 .sort-opt.active::after { content: '✓'; position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-size: 14px; }
-.sort-dir-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; font-size: 14px; color: var(--fg2); }
-.sort-dir { display: flex; gap: 8px; }
-.sd-btn {
-  height: 36px; padding: 0 14px; border-radius: 999px; background: var(--card);
-  font-size: 13px; color: var(--fg2); border: 1px solid var(--border);
-}
-.sd-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.sheet-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+.sheet-close { width: 32px; height: 32px; border-radius: 50%; background: var(--hover); display: flex; align-items: center; justify-content: center; color: var(--fg2); font-size: 16px; cursor: pointer; }
+.sort-rows { display: flex; flex-direction: column; gap: 14px; }
+.sort-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.sort-label { font-size: 15px; color: var(--fg2); }
+.sort-row.active .sort-label { color: var(--accent); font-weight: 600; }
+.sort-btns { display: flex; gap: 8px; }
+.sort-btn { min-width: 72px; height: 36px; padding: 0 14px; border-radius: 999px; background: var(--hover); font-size: 13px; color: var(--fg2); border: none; cursor: pointer; }
+.sort-btn.active { background: var(--accent); color: #fff; font-weight: 600; }
 /* ---------- 上传进度条浮层 ---------- */
 #upload-progress { position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 200; display: flex; align-items: center; justify-content: center; }
 #upload-progress.hidden { display: none; }
@@ -726,12 +728,12 @@ svg { display: block; }
 
 
 /* ---------- 一键查重 ---------- */
-#top-dup {
+#top-refresh {
   margin-left: auto; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center;
   color: var(--fg2); border-radius: 8px;
 }
-#top-dup svg { width: 20px; height: 20px; }
-#top-dup:active { background: var(--hover); }
+#top-refresh svg { width: 20px; height: 20px; }
+#top-refresh:active { background: var(--hover); }
 #top-sort { margin-left: 4px; }
 .dup-summary {
   padding: 10px 16px; font-size: 13px; color: var(--fg3); background: var(--card);
@@ -823,4 +825,24 @@ svg { display: block; }
 .dl-qr-wrap { display: flex; justify-content: center; margin: 10px 0; }
 .dl-qr-wrap canvas, .dl-qr-wrap img { width: 180px; height: 180px; }
 #dl-list .rc-row { cursor: pointer; }
+
+
+.back-top {
+  position: fixed; right: 12px; bottom: 140px;
+  width: 36px; height: 36px; border-radius: 50%;
+  background: var(--accent); color: #fff;
+  border: none; box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; z-index: 99;
+  transition: transform 0.2s, opacity 0.2s;
+}
+.back-top.hidden { transform: translateY(60px); opacity: 0; pointer-events: none; }
+.back-top:active { transform: scale(0.9); }
+
+
+.select-bar { position:fixed; left:0; right:0; bottom:60px; background:var(--card); border-top:1px solid var(--border); padding:10px 16px; display:flex; align-items:center; justify-content:space-between; z-index:80; }
+.rb-text { font-size:14px; color:var(--fg2); }
+.rb-btns { display:flex; gap:8px; }
+.rb-btn { padding:6px 14px; border-radius:8px; background:var(--hover); color:var(--fg); border:none; font-size:13px; cursor:pointer; }
+.rb-danger { background:var(--danger,#e53935); color:#fff; }
 

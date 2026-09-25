@@ -117,6 +117,7 @@ public class MainActivity extends Activity {
 
     // ---- 官方登录（主 WebView 直接加载官方登录页） ----
     private boolean officialLoginDone = false; // 已捕获到 sso-token（避免重复回填）
+    private boolean verifyMode = false; // 安全验证模式（在验证页面按返回键回App）
     private static final String OFFICIAL_LOGIN_URL =
         "https://user.123pan.cn/centerlogin?redirect_url=https%3A%2F%2Fyun.123pan.cn%2F&source_page=website";
 
@@ -590,6 +591,18 @@ public class MainActivity extends Activity {
 
     @Override
     public void onBackPressed() {
+        // 安全验证模式：按返回键回到App主界面
+        if (verifyMode) {
+            verifyMode = false;
+            // 恢复默认UA
+            webView.getSettings().setUserAgentString(null);
+            webView.loadUrl("file:///android_asset/index.html");
+            // 延迟通知前端刷新回收站列表
+            handler.postDelayed(() -> {
+                webView.evaluateJavascript("try{window.__onVerifyDone&&window.__onVerifyDone();}catch(e){}", null);
+            }, 500);
+            return;
+        }
         // 前端的回退（面包屑/抽屉）交给 JS；仅在没有可回退时退出
         handler.post(new Runnable() {
             @Override public void run() {
@@ -3133,6 +3146,20 @@ public class MainActivity extends Activity {
 
         @JavascriptInterface
         public String getLoginuuid() { return act.loginuuid; }
+
+        // 安全验证/网页端管理：在当前WebView打开指定URL，按返回键回App
+        @JavascriptInterface
+        public void openVerifyWeb() {
+            act.handler.post(() -> {
+                if (act.webView != null) {
+                    act.verifyMode = true;
+                    // 切换为桌面UA，访问网页版管理界面
+                    act.webView.getSettings().setUserAgentString(
+                        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+                    act.webView.loadUrl("https://canary-yun.123pan.cn/");
+                }
+            });
+        }
 
         //自动更新：后台拉取 GitHub 最新 Release 信息，经 __onUpdateCheck 回传前端
         @JavascriptInterface
