@@ -293,6 +293,21 @@ public class MainActivity extends Activity {
             }
 
             @Override
+            public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
+                super.onReceivedError(view, errorCode, description, failingUrl);
+                // file:// 加载失败（cacheDir被系统清理）：重新解密assets再加载
+                if (failingUrl != null && failingUrl.startsWith("file://") && errorCode == ERROR_FILE_NOT_FOUND) {
+                    Log.w("PAN", "file load error, re-decrypting: " + failingUrl);
+                    decryptAssets();
+                    handler.postDelayed(new Runnable() {
+                        @Override public void run() {
+                            if (webView != null) webView.loadUrl("file://" + getCacheDir().getAbsolutePath() + "/app/index.html");
+                        }
+                    }, 300);
+                }
+            }
+
+            @Override
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
                 if (url != null && url.startsWith("file://")) {
@@ -335,6 +350,11 @@ public class MainActivity extends Activity {
         // 未登录：直接显示官方登录页（账号密码 / 验证码登录均在官方页完成，含安全滑块）
         // 已登录：加载本地 SPA 恢复会话
         decryptAssets();
+        // 清空WebView缓存，确保加载最新app.js
+        if (webView != null) {
+            webView.clearCache(true);
+            webView.clearHistory();
+        }
         String savedToken = prefs.getString(KEY_TOKEN, "");
         if (savedToken != null && !savedToken.isEmpty()) {
             webView.loadUrl("file://" + getCacheDir().getAbsolutePath() + "/app/index.html");
@@ -347,6 +367,10 @@ public class MainActivity extends Activity {
     private void decryptAssets() {
         try {
             java.io.File outDir = new java.io.File(getCacheDir(), "app");
+            if (outDir.exists()) {
+                // 删除旧文件，避免缓存旧版本
+                deleteRecursive(outDir);
+            }
             outDir.mkdirs();
             byte KEY = 0x5A;
             // 根目录文件
@@ -376,6 +400,13 @@ public class MainActivity extends Activity {
         java.io.FileOutputStream fos = new java.io.FileOutputStream(outFile);
         fos.write(dec);
         fos.close();
+    }
+    private void deleteRecursive(java.io.File f) {
+        if (f.isDirectory()) {
+            java.io.File[] kids = f.listFiles();
+            if (kids != null) for (java.io.File k : kids) deleteRecursive(k);
+        }
+        f.delete();
     }
 
     private static String json(String s) {
@@ -632,6 +663,7 @@ public class MainActivity extends Activity {
             verifyMode = false;
             // 恢复默认UA
             webView.getSettings().setUserAgentString(null);
+            decryptAssets();
             webView.loadUrl("file://" + getCacheDir().getAbsolutePath() + "/app/index.html");
             // 延迟通知前端刷新回收站列表
             handler.postDelayed(() -> {

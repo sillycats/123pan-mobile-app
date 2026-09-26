@@ -91,6 +91,7 @@
   // 排序偏好（localStorage 持久化；默认按 file_id 倒序，与旧行为一致）
   var _sortPref = null;
   try { _sortPref = JSON.parse(localStorage.getItem('pan_sort') || 'null'); } catch (e) { _sortPref = null; }
+  var lastUserInfo = null;
   var state = {
     token: '',
     user: '',
@@ -124,7 +125,7 @@
     dupSelected: {},         // 查重结果中选中的 fileId -> item
     dupScanning: false,      // 是否正在全盘扫描
     dupScanned: 0,           // 已扫描文件数
-    orderBy: (_sortPref && _sortPref.by) || 'file_id',       // 列表排序字段（file_name/file_size/updated_at/file_id）
+    orderBy: (_sortPref && _sortPref.by) || 'updated_at',       // 列表排序字段（file_name/file_size/updated_at/file_id）
     orderDirection: (_sortPref && _sortPref.dir) || 'desc',  // 排序方向 asc/desc
     viewMode: (function () { try { return localStorage.getItem('pan_view') || 'list'; } catch (e) { return 'list'; } })(),
   };
@@ -245,7 +246,22 @@
     broom: '<path d="M13.5 10.5L22 2m-7.266 11.841a2 2 0 0 0-.314-2.42L12.58 9.58a2 2 0 0 0-2.421-.314l-7.657 4.461A1 1 0 0 0 2.3 15.3l6.403 6.403a1 1 0 0 0 1.571-.204zM5 18l2-2m.699-5.3l5.602 5.601" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
     'user-plus': '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM19 8v6M22 11h-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
     sun: '<circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
-    bulb: '<path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.4 1 2.3h6c0-.9.4-1.8 1-2.3A7 7 0 0 0 12 2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'
+    bulb: '<path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.4 1 2.3h6c0-.9.4-1.8 1-2.3A7 7 0 0 0 12 2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+    crown: '<path d="M2 18l2-9 5 4 3-6 3 6 5-4 2 9H2zM4 22h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+    zap: '<path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+    file: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 2v6h6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+    hdd: '<path d="M22 12H2M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="6" y1="16" x2="6.01" y2="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+    user: '<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+    share: '<circle cx="18" cy="5" r="3" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="6" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="18" cy="19" r="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8.59 13.51l6.83 3.98M15.41 6.51l-6.82 3.98" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+    download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+    trash: '<path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+    restore: '<path d="M3 7v6h6M21 17a9 9 0 0 0-15-6.7L3 13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+    folder: '<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>',
+    copy: '<rect x="9" y="9" width="13" height="13" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+    rename: '<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+    detail: '<circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/><line x1="12" y1="16" x2="12" y2="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="12" y1="8" x2="12.01" y2="8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+    open: '<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+    web: '<circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/><line x1="2" y1="12" x2="22" y2="12" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'
   };
   function applySvg(el, name) {
     var inner = ICON_SVG[name];
@@ -270,8 +286,97 @@
   }
 
   // ---------- 原生桥调用 ----------
+  // 手机号/邮箱脱敏
+  function maskPhone(s) {
+    if (!s) return s;
+    s = String(s);
+    if (/^1\d{10}$/.test(s)) return s.substring(0, 3) + '****' + s.substring(7);
+    return s;
+  }
+  function maskEmail(s) {
+    if (!s) return s;
+    s = String(s);
+    var at = s.indexOf('@');
+    if (at < 2) return s;
+    var name = s.substring(0, at);
+    var domain = s.substring(at);
+    if (name.length <= 2) return name[0] + '*' + domain;
+    return name.substring(0, 2) + '****' + domain;
+  }
+  function maskAccount(s) {
+    s = maskPhone(s);
+    if (s.indexOf('@') > 0) s = maskEmail(s);
+    return s;
+  }
   function toast(msg) {
-    if (bridge && bridge.toast) bridge.toast(String(msg));
+    var old = document.getElementById('app-toast');
+    if (old) old.remove();
+    var t = document.createElement('div');
+    t.id = 'app-toast';
+    t.style.cssText = 'position:fixed;bottom:120px;left:50%;transform:translateX(-50%);background:var(--accent,#2979ff);color:#fff;padding:10px 20px;border-radius:24px;font-size:14px;z-index:999999;max-width:80%;text-align:center;box-shadow:0 4px 16px rgba(41,121,255,.3);';
+    t.textContent = String(msg);
+    document.body.appendChild(t);
+    setTimeout(function(){ if (t.parentNode) t.parentNode.removeChild(t); }, 2000);
+  }
+  // 美化弹窗
+  function showDialog(title, msg) {
+    var old = document.getElementById('app-dialog-mask');
+    if (old) old.remove();
+    var mask = document.createElement('div');
+    mask.id = 'app-dialog-mask';
+    mask.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:99999;display:flex;align-items:center;justify-content:center;';
+    var box = document.createElement('div');
+    box.style.cssText = 'background:var(--card-bg,#fff);border-radius:16px;max-width:85%;max-height:70vh;overflow-y:auto;padding:20px;box-shadow:0 8px 32px rgba(0,0,0,.2);';
+    var t = document.createElement('div');
+    t.style.cssText = 'font-size:17px;font-weight:600;margin-bottom:12px;color:var(--fg,#333);';
+    t.textContent = title;
+    var c = document.createElement('div');
+    c.style.cssText = 'font-size:14px;line-height:1.6;color:var(--fg2,#666);white-space:pre-wrap;word-break:break-all;';
+    c.textContent = msg;
+    var btn = document.createElement('button');
+    btn.textContent = '确定';
+    btn.style.cssText = 'margin-top:16px;width:100%;padding:10px;border:none;border-radius:10px;background:var(--accent,#2979ff);color:#fff;font-size:15px;';
+    btn.onclick = function(){ mask.remove(); };
+    box.appendChild(t); box.appendChild(c); box.appendChild(btn);
+    mask.appendChild(box);
+    mask.onclick = function(e){ if(e.target===mask) mask.remove(); };
+    document.body.appendChild(mask);
+  }
+  // 美化输入弹窗
+  function showPrompt(title, hint, defaultVal, cb) {
+    var old = document.getElementById('app-prompt-mask');
+    if (old) old.remove();
+    var mask = document.createElement('div');
+    mask.id = 'app-prompt-mask';
+    mask.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:99999;display:flex;align-items:center;justify-content:center;';
+    var box = document.createElement('div');
+    box.style.cssText = 'background:var(--card-bg,#fff);border-radius:16px;width:85%;padding:20px;box-shadow:0 8px 32px rgba(0,0,0,.2);';
+    var t = document.createElement('div');
+    t.style.cssText = 'font-size:17px;font-weight:600;margin-bottom:8px;color:var(--fg,#333);';
+    t.textContent = title;
+    var h = document.createElement('div');
+    h.style.cssText = 'font-size:12px;color:var(--fg2,#999);margin-bottom:12px;';
+    h.textContent = hint;
+    var input = document.createElement('input');
+    input.type = 'text';
+    input.value = defaultVal || '';
+    input.style.cssText = 'width:100%;padding:10px;border:1px solid var(--border,#ddd);border-radius:10px;font-size:14px;background:var(--input-bg,#f5f5f5);color:var(--fg,#333);box-sizing:border-box;';
+    var btns = document.createElement('div');
+    btns.style.cssText = 'display:flex;gap:10px;margin-top:16px;';
+    var cancel = document.createElement('button');
+    cancel.textContent = '取消';
+    cancel.style.cssText = 'flex:1;padding:10px;border:none;border-radius:10px;background:var(--bg2,#f0f0f0);color:var(--fg,#666);font-size:15px;';
+    cancel.onclick = function(){ mask.remove(); cb(null); };
+    var ok = document.createElement('button');
+    ok.textContent = '确定';
+    ok.style.cssText = 'flex:1;padding:10px;border:none;border-radius:10px;background:var(--accent,#2979ff);color:#fff;font-size:15px;';
+    ok.onclick = function(){ var v = input.value; mask.remove(); cb(v); };
+    btns.appendChild(cancel); btns.appendChild(ok);
+    box.appendChild(t); box.appendChild(h); box.appendChild(input); box.appendChild(btns);
+    mask.appendChild(box);
+    mask.onclick = function(e){ if(e.target===mask){ mask.remove(); cb(null); } };
+    document.body.appendChild(mask);
+    input.focus();
   }
   function api(method, url, body, withAuth, cb) {
     var cbName = '_cb' + Date.now() + '_' + Math.floor(Math.random() * 1e6);
@@ -578,11 +683,11 @@
     var box = $('transfer-list');
     var empty = $('transfer-empty');
     if (!box) return;
+    var tbD = $('ttab-download'), tbU = $('ttab-upload'), tbo = $('ttab-offline');
     // 离线下载页：显示表单
     if (state.transferTab === 'offline') {
       if (tbD) tbD.classList.remove('active');
       if (tbU) tbU.classList.remove('active');
-      var tbo = $('ttab-offline');
       if (tbo) tbo.classList.add('active');
       if (empty) hide(empty);
       box.innerHTML = '<div style="padding:16px;">'
@@ -601,9 +706,9 @@
     var tab = state.transferTab === 'upload' ? 'upload' : 'download';
     var list = (tab === 'upload') ? ups : arr;
     // 同步子页签高亮
-    var tbD = $('ttab-download'), tbU = $('ttab-upload');
     if (tbD) tbD.classList.toggle('active', tab !== 'upload');
     if (tbU) tbU.classList.toggle('active', tab === 'upload');
+    if (tbo) tbo.classList.remove('active');
     // 空态文案随子页签变化
     var et = $('transfer-empty-title');
     if (et) et.textContent = tab === 'upload' ? '暂无上传任务' : '暂无下载任务';
@@ -3930,14 +4035,15 @@
         // 回退到输入框
         var cur = '云盘助手';
         try { cur = bridge.getDownloadSubDir() || cur; } catch (e) {}
-        var val = prompt('输入下载子目录名（位于系统Download目录下）', cur);
-        if (val === null) return;
-        val = String(val).trim();
-        if (!val) { toast('目录名不能为空'); return; }
-        if (/[\/\\]/.test(val)) { toast('目录名不能包含斜杠'); return; }
-        bridge.setDownloadSubDir(val);
-        renderDownloadDir();
-        toast('下载目录已改为 /Download/' + val);
+        showPrompt('输入下载子目录名', '位于系统Download目录下', cur, function(val){
+          if (val === null) return;
+          val = String(val).trim();
+          if (!val) { toast('目录名不能为空'); return; }
+          if (/[\/\\]/.test(val)) { toast('目录名不能包含斜杠'); return; }
+          bridge.setDownloadSubDir(val);
+          renderDownloadDir();
+          toast('下载目录已改为 /Download/' + val);
+        });
       }
     } catch (e) { toast('选择目录失败：' + e.message); }
   }
@@ -4088,22 +4194,61 @@
     renderKeepScreenOn();
     renderDownloadDir();
     renderTheme();
+    $('mine-pro-space').addEventListener('click', function(){
+      showDialog('专业空间', '多副本分布式对象存储空间，更安全更高速，用于存放您独自存储的文件、10GB及以上的超大文件（含分卷压缩后的文件组）、以及直链、图床、视频转码服务等功能产生的文件');
+    });
+    $('mine-std-space').addEventListener('click', function(){
+      showDialog('标准空间', '标准网络云存储空间，123云盘独创重复文件与回收站文件不计容量机制，用于存放您标准自他人的文件、您被他人标准的文件、以及其他非您独自存储的文件');
+    });
+    $('mine-quota').addEventListener('click', function(){
+      if (lastUserInfo && numOf(lastUserInfo, 'VipLevel') > 0) {
+        showDialog('成长容量', '成长容量是一项会员特权，指用户处于会员状态时，将在每月1日4:00至8:00期间分批进行容量升级，每级获得额外800G标准容量。该等级最多可叠加128级，成长容量上限为100T。\n\n会员到期后，成长容量等级从次月1日4:00至8:00起逐月递减，每降低一级，标准空间减少800G，直至成长容量归零；归零后不统一恢复为2TB，而是保留用户当前基础标准容量及其他有效标准容量权益。\n\n基础标准容量：新未实名50GB，新已实名2TB，老用户2TB。');
+      }
+    });
     api('GET', API.userInfo, '', true, function (d) {
       if (d && (d.data || d.Data)) {
         var u = d.data || d.Data;
-        // 兼容：部分响应的用户信息嵌套在 user 对象中
         if (u.user && typeof u.user === 'object') u = u.user;
-        // 123pan /b/api/user/info 真实字段：SpaceUsed（已用）、SpacePermanent（永久空间）、SpaceTemp（临时空间）
-        var used = numOf(u, 'SpaceUsed', 'UsedSize', 'usedSize', 'space_used', 'used');
-        var permanent = numOf(u, 'SpacePermanent', 'TotalSize', 'totalSize', 'space_total', 'total');
-        var temp = numOf(u, 'SpaceTemp', 'freeSize', 'FreeSize', 'space_temp', 'free');
-        // 总额 = 永久空间 + 临时空间；备用取 used + free
-        var total = (permanent > 0 || temp > 0) ? (permanent + temp) : 0;
-        if (!(total > 0)) total = used + (temp > 0 ? temp : 0);
+        var used = numOf(u, 'SpaceUsed', 'SpaceUsedTotal');
+        var permanent = numOf(u, 'SpacePermanent', 'SpacePermanentTotal');
+        var temp = numOf(u, 'SpaceTemp');
+        lastUserInfo = u;
+        var proTotal = numOf(u, 'ProfessionalSpacePermanent');
+        var proUsed = numOf(u, 'ProfessionalSpaceUsed');
+        var stdTotal = numOf(u, 'StandardSpacePermanent');
+        var stdUsed = numOf(u, 'StandardSpaceUsed');
+        // VIP信息
+        var vipLevel = numOf(u, 'VipLevel');
+        var vipExpire = u.VipExpire || '';
+        var vipDesc = u.VipExplain || '';
+        if (vipLevel > 0) {
+          $('mine-vip-val').textContent = 'VIP' + vipLevel + ' ' + vipDesc + ' 至 ' + vipExpire;
+        } else {
+          $('mine-vip-val').textContent = '普通用户';
+        }
+        // 文件总数
+        var fileCount = numOf(u, 'FileCount');
+        if (fileCount > 0) $('mine-filecount-val').textContent = fileCount + ' 个文件';
+        // 直链流量
+        var directTraffic = numOf(u, 'DirectTraffic');
+        if (directTraffic > 0) $('mine-traffic-val').textContent = '共 ' + fmtSize(directTraffic);
+        // 分享流量
+        var shareTraffic = numOf(u, 'ShareTraffic');
+        if (shareTraffic > 0) $('mine-share-traffic-val').textContent = '共 ' + fmtSize(shareTraffic);
+        // 实名认证
+        $('mine-auth-val').textContent = u.IsAuthentication ? '已认证' : '未认证';
+        var total = permanent + temp;
         if (total > 0) {
-          var usedV = used > 0 ? used : Math.max(0, total - temp);
           $('mine-quota-val').textContent =
-            '已用 ' + fmtSize(usedV) + ' / 共 ' + fmtSize(total);
+            fmtSize(used) + ' / ' + fmtSize(total);
+          if (proTotal > 0) {
+            $('mine-pro-space').style.display = '';
+            $('mine-pro-val').textContent = fmtSize(proUsed) + ' / ' + fmtSize(proTotal);
+          }
+          if (stdTotal > 0) {
+            $('mine-std-space').style.display = '';
+            $('mine-std-val').textContent = fmtSize(stdUsed) + ' / ' + fmtSize(stdTotal);
+          }
         } else {
           $('mine-quota-val').textContent = '容量不可用';
         }
@@ -4245,13 +4390,24 @@
     for (var i = 0; i < list.length; i++) { if (list[i].user === curName) { curAcct = list[i]; break; } }
     if (!curAcct) curAcct = list[0];
     var cLetter = (curAcct.user.charAt(0) || '用').toUpperCase();
+    // 内联脱敏，避免函数未定义问题
+    var rawUser = String(curAcct.user || '');
+    var displayName = rawUser;
+    if (/^1\d{10}$/.test(rawUser)) {
+      displayName = rawUser.substring(0, 3) + '****' + rawUser.substring(7);
+    } else if (rawUser.indexOf('@') > 0) {
+      var at = rawUser.indexOf('@');
+      var nm = rawUser.substring(0, at);
+      var dm = rawUser.substring(at);
+      displayName = nm.substring(0, 2) + '****' + dm;
+    }
 
     var html = '';
     // ---- 折叠区：当前账号 + 展开按钮 ----
     html += '<div class="acct-summary" data-summary="1">'
       + '<div class="acct-avatar sm">' + esc(cLetter) + '</div>'
       + '<div class="acct-info">'
-      + '<div class="acct-user">' + esc(curAcct.user) + '</div>'
+      + '<div class="acct-user">' + esc(displayName) + '</div>'
       + '<div class="acct-meta"><span class="mi-icon" data-icon="check"></span>当前账号</div>'
       + '</div>'
       + '<span class="acct-toggle" data-toggle="1">'
@@ -4294,10 +4450,18 @@
       others.forEach(function (a) {
         var name = a.user || '';
         var letter = (name.charAt(0) || '用').toUpperCase();
+        var rawN = String(name);
+        var displayName = rawN;
+        if (/^1\d{10}$/.test(rawN)) {
+          displayName = rawN.substring(0, 3) + '****' + rawN.substring(7);
+        } else if (rawN.indexOf('@') > 0) {
+          var at2 = rawN.indexOf('@');
+          displayName = rawN.substring(0, 2) + '****' + rawN.substring(at2);
+        }
         html += '<div class="acct-item" data-user="' + esc(name) + '">'
           + '<div class="acct-avatar xs">' + esc(letter) + '</div>'
           + '<div class="acct-info">'
-          + '<div class="acct-user">' + esc(name) + '</div>'
+          + '<div class="acct-user">' + esc(displayName) + '</div>'
           + '<span class="acct-meta">点击切换</span>'
           + '</div>'
           + '<span class="acct-goto"><span class="mi-icon" data-icon="chevron-right"></span></span>'
@@ -4357,6 +4521,55 @@
   // 添加账号：统一走官方 123 云盘登录页（账号密码 / 手机验证码 + 滑块均官方处理）
   function openAddAccount() {
     openOfficialLogin();
+  }
+  // 个人资料弹窗
+  function showProfile() {
+    api('GET', API.userInfo, '', true, function (d) {
+      if (!d || !(d.data || d.Data)) { toast('获取失败'); return; }
+      var u = d.data || d.Data;
+      if (u.user && typeof u.user === 'object') u = u.user;
+      lastUserInfo = u;
+      var lines = [
+        'UID：' + (u.UID || '-'),
+        '昵称：' + (u.Nickname || '-').trim(),
+        '邮箱：' + (u.Mail || '-'),
+        '账号：' + (u.Passport || '-'),
+        'VIP等级：' + (u.VipLevel > 0 ? 'VIP' + u.VipLevel : '普通用户'),
+        'VIP到期：' + (u.VipExpire || '无'),
+        'VIP时长：' + (u.VipExplain || '-'),
+        '实名认证：' + (u.IsAuthentication ? '已认证' : '未认证'),
+        '微信绑定：' + (u.BindWechat ? '已绑定' : '未绑定'),
+        '文件总数：' + (u.FileCount || 0) + ' 个',
+        '已用空间：' + fmtSize(numOf(u, 'SpaceUsed', 'SpaceUsedTotal')),
+        '直链流量：' + fmtSize(numOf(u, 'DirectTraffic')),
+        '分享流量：' + fmtSize(numOf(u, 'ShareTraffic'))
+      ];
+      // 美化弹窗带修改昵称按钮
+      var old = document.getElementById('app-dialog-mask');
+      if (old) old.remove();
+      var mask = document.createElement('div');
+      mask.id = 'app-dialog-mask';
+      mask.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:99999;display:flex;align-items:center;justify-content:center;';
+      var box = document.createElement('div');
+      box.style.cssText = 'background:var(--card-bg,#fff);border-radius:16px;max-width:85%;max-height:70vh;overflow-y:auto;padding:20px;box-shadow:0 8px 32px rgba(0,0,0,.2);';
+      var t = document.createElement('div');
+      t.style.cssText = 'font-size:17px;font-weight:600;margin-bottom:12px;color:var(--fg,#333);';
+      t.textContent = '个人资料';
+      var c = document.createElement('div');
+      c.style.cssText = 'font-size:14px;line-height:1.6;color:var(--fg2,#666);white-space:pre-wrap;word-break:break-all;';
+      c.textContent = lines.join('\n');
+      var row = document.createElement('div');
+      row.style.cssText = 'margin-top:16px;';
+      var okBtn = document.createElement('button');
+      okBtn.textContent = '关闭';
+      okBtn.style.cssText = 'width:100%;padding:10px;border:none;border-radius:10px;background:var(--accent,#2979ff);color:#fff;font-size:15px;';
+      okBtn.onclick = function(){ mask.remove(); };
+      row.appendChild(okBtn);
+      box.appendChild(t); box.appendChild(c); box.appendChild(row);
+      mask.appendChild(box);
+      mask.onclick = function(e){ if(e.target===mask) mask.remove(); };
+      document.body.appendChild(mask);
+    });
   }
   // 添加账号提交（兼容兜底）：统一走官方登录页（本地密码登录会被官方滑块拦截，不从 App 内发起）
   function submitAddAccount() {
@@ -4715,6 +4928,9 @@
     // 多账号：添加账号入口（统一走官方登录页）
     var accountAdd = $('account-add');
     if (accountAdd) accountAdd.addEventListener('click', openAddAccount);
+    // 个人资料
+    var profileBtn = $('mine-profile');
+    if (profileBtn) profileBtn.addEventListener('click', showProfile);
     // 清除缓存
     var clearCacheBtn = $('mine-clear-cache');
     if (clearCacheBtn) clearCacheBtn.addEventListener('click', clearCache);
