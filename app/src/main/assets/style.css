@@ -21,6 +21,8 @@
   --modal-bg: rgba(0,0,0,.45);
   --hover: rgba(0,0,0,.04);
   --shadow: rgba(0,0,0,.06);
+  --toast-bg: #2B6DE8;
+  --toast-fg: #ffffff;
 }
 [data-theme="dark"] {
   --bg: #0f1115;
@@ -44,6 +46,8 @@
   --modal-bg: rgba(0,0,0,.6);
   --hover: rgba(255,255,255,.06);
   --shadow: rgba(0,0,0,.4);
+  --toast-bg: #2a2e38;
+  --toast-fg: #c8cdd5;
 }
 [data-theme="dark"] .file-icon-wrap.fi-folder { background: #3a2f1e; color: #f5b04a; }
 [data-theme="dark"] .file-icon-wrap.fi-image { background: #1d3325; color: #34d06a; }
@@ -130,8 +134,8 @@ svg { display: block; }
 }
 .field input:focus { outline: none; border-color: var(--accent); }
 .btn-primary {
-  width: 100%; height: 46px; margin-top: 8px; border-radius: 12px; background: var(--accent);
-  color: #fff; font-size: 15px; font-weight: 600; border: none;
+  width: 100%; height: 46px; margin-top: 8px; border-radius: 12px; background: var(--accent-bg);
+  color: var(--accent); font-size: 15px; font-weight: 600; border: none;
 }
 .btn-primary:disabled { opacity: .6; }
 .btn-lg { height: 50px; font-size: 16px; margin-top: 4px; box-shadow: 0 6px 16px rgba(43,109,232,.28); }
@@ -142,7 +146,7 @@ svg { display: block; }
 .vcode-input-wrap .field-input { margin-bottom: 0; }
 .vcode-send-btn {
   flex: 0 0 auto; height: 46px; margin-left: 10px; padding: 0 14px; margin-top: 21px;
-  border-radius: 12px; background: var(--accent); color: #fff; font-size: 14px; font-weight: 500;
+  border-radius: 12px; background: var(--accent-bg); color: var(--accent); font-size: 14px; font-weight: 500;
   white-space: nowrap;
 }
 .vcode-send-btn:disabled { background: var(--accent-bg); }
@@ -490,11 +494,11 @@ svg { display: block; }
 .sc-btns { display: flex; gap: 12px; margin-top: 22px; }
 .sc-btn { flex: 1; height: 36px; border-radius: 999px; font-size: 15px; font-weight: 600; }
 .sc-btn.cancel { background: var(--card); color: var(--fg2); border: 1px solid var(--border); }
-.sc-btn.primary { background: var(--accent); color: #fff; border: 1px solid var(--accent); }
+.sc-btn.primary { background: var(--accent-bg); color: var(--accent); border: 1px solid var(--accent-bg); }
 .sc-btn:active { opacity: .85; }
 .share-copy {
-  width: 100%; height: 44px; margin-top: 14px; border-radius: 10px; background: var(--accent);
-  color: #fff; font-size: 15px; font-weight: 600;
+  width: 100%; height: 44px; margin-top: 14px; border-radius: 10px; background: var(--accent-bg);
+  color: var(--accent); font-size: 15px; font-weight: 600;
 }
 /* ---- 传输任务列表 ---- */
 #transfer-list { padding: 10px 14px; }
@@ -578,8 +582,8 @@ svg { display: block; }
   height: 34px; padding: 0 12px; border-radius: 17px; font-size: 13px; border: 1px solid var(--border);
   background: var(--card); color: var(--fg2); white-space: nowrap;
 }
-.st-btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
-.st-btn.primary.disabled { background: var(--accent-bg); border-color: var(--accent-bg); color: #fff; }
+.st-btn.primary { background: var(--accent-bg); border-color: var(--accent-bg); color: var(--accent); }
+.st-btn.primary.disabled { background: var(--border); border-color: var(--border); color: var(--fg3); }
 .st-btn.danger { background: var(--danger-bg); border-color: var(--danger-bg); color: var(--danger); }
 .st-btn.danger.disabled { background: var(--danger-bg); border-color: var(--danger-bg); color: #f2c0c2; }
 
@@ -643,10 +647,10 @@ svg { display: block; }
 .rc-name { font-size: 14px; color: var(--fg); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rc-meta { font-size: 12px; color: var(--fg3); margin-top: 2px; }
 .rc-enter { width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; color: var(--fg2); font-size: 20px; }
-.rc-bar { position: fixed; left: 0; right: 0; bottom: 0; height: 60px; z-index: 95; display: flex; align-items: center; gap: 12px; padding: 0 16px; background: rgba(255,255,255,.97); border-top: 1px solid var(--border); }
+.rc-bar { position: fixed; left: 0; right: 0; bottom: 0; height: 60px; z-index: 95; display: flex; align-items: center; gap: 12px; padding: 0 16px; background: var(--card); border-top: 1px solid var(--border); }
 #receive-selinfo { flex: 1; font-size: 14px; color: var(--fg2); }
-.rc-save { height: 40px; padding: 0 26px; border-radius: 20px; background: var(--accent); color: #fff; font-size: 15px; border: none; }
-.rc-save.disabled { background: var(--accent-bg); }
+.rc-save { height: 40px; padding: 0 26px; border-radius: 20px; background: var(--accent-bg); color: var(--accent); font-size: 15px; border: none; }
+.rc-save.disabled { background: var(--border); color: var(--fg3); }
 /* ---------- 排序（topbar 按钮 + 面板） ---------- */
 #top-sort {
   margin-left: auto; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center;
@@ -668,7 +672,7 @@ svg { display: block; }
 .sort-row.active .sort-label { color: var(--accent); font-weight: 600; }
 .sort-btns { display: flex; gap: 8px; }
 .sort-btn { min-width: 72px; height: 36px; padding: 0 14px; border-radius: 999px; background: var(--hover); font-size: 13px; color: var(--fg2); border: none; cursor: pointer; }
-.sort-btn.active { background: var(--accent); color: #fff; font-weight: 600; }
+.sort-btn.active { background: var(--accent-bg); color: var(--accent); font-weight: 600; }
 /* ---------- 上传进度条浮层 ---------- */
 #upload-progress { position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 200; display: flex; align-items: center; justify-content: center; }
 #upload-progress.hidden { display: none; }
@@ -724,7 +728,7 @@ svg { display: block; }
 .pv-fb-btns { display: flex; gap: 12px; justify-content: center; }
 .pv-btn { height: 36px; padding: 0 22px; border-radius: 999px; background: var(--card); border: 1px solid var(--border); color: var(--fg2); font-size: 14px; }
 .pv-btn:active { opacity: .85; }
-.pv-btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.pv-btn.primary { background: var(--accent-bg); border-color: var(--accent-bg); color: var(--accent); }
 
 
 /* ---------- 一键查重 ---------- */
@@ -830,8 +834,8 @@ svg { display: block; }
 .back-top {
   position: fixed; right: 12px; bottom: 140px;
   width: 36px; height: 36px; border-radius: 50%;
-  background: var(--accent); color: #fff;
-  border: none; box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  background: var(--accent-bg); color: var(--accent);
+  border: none; box-shadow: 0 2px 8px var(--shadow);
   display: flex; align-items: center; justify-content: center;
   cursor: pointer; z-index: 99;
   transition: transform 0.2s, opacity 0.2s;

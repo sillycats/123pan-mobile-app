@@ -313,7 +313,7 @@
     if (old) old.remove();
     var t = document.createElement('div');
     t.id = 'app-toast';
-    t.style.cssText = 'position:fixed;bottom:120px;left:50%;transform:translateX(-50%);background:var(--accent,#2979ff);color:#fff;padding:10px 20px;border-radius:24px;font-size:14px;z-index:999999;max-width:80%;text-align:center;box-shadow:0 4px 16px rgba(41,121,255,.3);';
+    t.style.cssText = 'position:fixed;bottom:120px;left:50%;transform:translateX(-50%);background:var(--toast-bg);color:var(--toast-fg);padding:10px 20px;border-radius:24px;font-size:14px;z-index:9999999;max-width:80%;text-align:center;';
     t.textContent = String(msg);
     document.body.appendChild(t);
     setTimeout(function(){ if (t.parentNode) t.parentNode.removeChild(t); }, 2000);
@@ -326,16 +326,16 @@
     mask.id = 'app-dialog-mask';
     mask.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:99999;display:flex;align-items:center;justify-content:center;';
     var box = document.createElement('div');
-    box.style.cssText = 'background:var(--card-bg,#fff);border-radius:16px;max-width:85%;max-height:70vh;overflow-y:auto;padding:20px;box-shadow:0 8px 32px rgba(0,0,0,.2);';
+    box.style.cssText = 'background:var(--card);border-radius:16px;max-width:85%;max-height:70vh;overflow-y:auto;padding:20px;box-shadow:0 8px 32px rgba(0,0,0,.2);';
     var t = document.createElement('div');
-    t.style.cssText = 'font-size:17px;font-weight:600;margin-bottom:12px;color:var(--fg,#333);';
+    t.style.cssText = 'font-size:17px;font-weight:600;margin-bottom:12px;color:var(--fg);';
     t.textContent = title;
     var c = document.createElement('div');
-    c.style.cssText = 'font-size:14px;line-height:1.6;color:var(--fg2,#666);white-space:pre-wrap;word-break:break-all;';
+    c.style.cssText = 'font-size:14px;line-height:1.6;color:var(--fg2);white-space:pre-wrap;word-break:break-all;';
     c.textContent = msg;
     var btn = document.createElement('button');
     btn.textContent = '确定';
-    btn.style.cssText = 'margin-top:16px;width:100%;padding:10px;border:none;border-radius:10px;background:var(--accent,#2979ff);color:#fff;font-size:15px;';
+    btn.style.cssText = 'margin-top:16px;width:100%;padding:10px;border:none;border-radius:10px;background:var(--accent-bg);color:var(--accent);font-size:15px;';
     btn.onclick = function(){ mask.remove(); };
     box.appendChild(t); box.appendChild(c); box.appendChild(btn);
     mask.appendChild(box);
@@ -350,9 +350,9 @@
     mask.id = 'app-prompt-mask';
     mask.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:99999;display:flex;align-items:center;justify-content:center;';
     var box = document.createElement('div');
-    box.style.cssText = 'background:var(--card-bg,#fff);border-radius:16px;width:85%;padding:20px;box-shadow:0 8px 32px rgba(0,0,0,.2);';
+    box.style.cssText = 'background:var(--card);border-radius:16px;width:85%;padding:20px;box-shadow:0 8px 32px rgba(0,0,0,.2);';
     var t = document.createElement('div');
-    t.style.cssText = 'font-size:17px;font-weight:600;margin-bottom:8px;color:var(--fg,#333);';
+    t.style.cssText = 'font-size:17px;font-weight:600;margin-bottom:8px;color:var(--fg);';
     t.textContent = title;
     var h = document.createElement('div');
     h.style.cssText = 'font-size:12px;color:var(--fg2,#999);margin-bottom:12px;';
@@ -360,16 +360,16 @@
     var input = document.createElement('input');
     input.type = 'text';
     input.value = defaultVal || '';
-    input.style.cssText = 'width:100%;padding:10px;border:1px solid var(--border,#ddd);border-radius:10px;font-size:14px;background:var(--input-bg,#f5f5f5);color:var(--fg,#333);box-sizing:border-box;';
+    input.style.cssText = 'width:100%;padding:10px;border:1px solid var(--border);border-radius:10px;font-size:14px;background:var(--bg);color:var(--fg);box-sizing:border-box;';
     var btns = document.createElement('div');
     btns.style.cssText = 'display:flex;gap:10px;margin-top:16px;';
     var cancel = document.createElement('button');
     cancel.textContent = '取消';
-    cancel.style.cssText = 'flex:1;padding:10px;border:none;border-radius:10px;background:var(--bg2,#f0f0f0);color:var(--fg,#666);font-size:15px;';
+    cancel.style.cssText = 'flex:1;padding:10px;border:none;border-radius:10px;background:var(--border);color:var(--fg,#666);font-size:15px;';
     cancel.onclick = function(){ mask.remove(); cb(null); };
     var ok = document.createElement('button');
     ok.textContent = '确定';
-    ok.style.cssText = 'flex:1;padding:10px;border:none;border-radius:10px;background:var(--accent,#2979ff);color:#fff;font-size:15px;';
+    ok.style.cssText = 'flex:1;padding:10px;border:none;border-radius:10px;background:var(--accent-bg);color:var(--accent);font-size:15px;';
     ok.onclick = function(){ var v = input.value; mask.remove(); cb(v); };
     btns.appendChild(cancel); btns.appendChild(ok);
     box.appendChild(t); box.appendChild(h); box.appendChild(input); box.appendChild(btns);
@@ -691,10 +691,10 @@
       if (tbo) tbo.classList.add('active');
       if (empty) hide(empty);
       box.innerHTML = '<div style="padding:16px;">'
-        + '<div style="font-size:13px;color:var(--fg3,#999);margin-bottom:8px;">输入磁力链接或 HTTP(S) 直链，提交后云端离线下载到你的网盘</div>'
-        + '<textarea id="offline-url" placeholder="magnet:?xt=... 或 https://..." style="width:100%;height:90px;border:1px solid var(--divider,#ddd);border-radius:8px;padding:10px;box-sizing:border-box;font-size:14px;background:var(--card,#fff);color:var(--fg,#333);resize:vertical;"></textarea>'
-        + '<button id="offline-go" style="margin-top:12px;width:100%;padding:12px;border:none;border-radius:8px;background:var(--accent,#2563eb);color:#fff;font-size:15px;">提交离线下载</button>'
-        + '<div id="offline-result" style="margin-top:12px;font-size:13px;color:var(--fg2,#666);line-height:1.6;"></div>'
+        + '<div style="font-size:13px;color:var(--fg3);margin-bottom:8px;">输入磁力链接或 HTTP(S) 直链，提交后云端离线下载到你的网盘</div>'
+        + '<textarea id="offline-url" placeholder="magnet:?xt=... 或 https://..." style="width:100%;height:90px;border:1px solid var(--border);border-radius:8px;padding:10px;box-sizing:border-box;font-size:14px;background:var(--card);color:var(--fg);resize:vertical;"></textarea>'
+        + '<button id="offline-go" style="margin-top:12px;width:100%;padding:12px;border:none;border-radius:8px;background:var(--accent-bg);color:var(--accent);font-size:15px;">提交离线下载</button>'
+        + '<div id="offline-result" style="margin-top:12px;font-size:13px;color:var(--fg2);line-height:1.6;"></div>'
         + '</div>';
       $('offline-go').addEventListener('click', doOfflineDownload);
       return;
@@ -2540,7 +2540,7 @@
     var btn = document.createElement('button');
     btn.id = 'restore-pick-confirm';
     btn.textContent = '恢复到此';
-    btn.style.cssText = 'position:fixed;bottom:200px;right:16px;z-index:999;background:var(--accent);color:#fff;border:none;border-radius:24px;padding:12px 20px;font-size:14px;box-shadow:0 2px 8px rgba(0,0,0,0.3);';
+    btn.style.cssText = 'position:fixed;bottom:200px;right:16px;z-index:999;background:var(--accent-bg);color:var(--accent);border:none;border-radius:24px;padding:12px 20px;font-size:14px;box-shadow:0 2px 8px var(--shadow);';
     btn.addEventListener('click', function () {
       document.body.removeChild(btn);
       var targetId = state.currentDir || 0;
@@ -2724,7 +2724,7 @@
       + '<div class="pv-fb-title">' + esc(title || '无法在线预览该文件') + '</div>'
       + '<div class="pv-fb-sub">' + esc(sub || '') + '</div>'
       + '<div class="pv-fb-btns">'
-      + '<button class="pv-btn" id="pv-fb-copy">复制链接</button>'
+      + '<button class="pv-btn" id="pv-fb-copy">复制直链</button>'
       + '<button class="pv-btn primary" id="pv-fb-download">下载</button>'
       + '</div></div>';
     var fbCopy = $('pv-fb-copy');
@@ -2764,8 +2764,21 @@
   }
   function copyPreviewLink() {
     var pv = state.preview;
-    if (!pv || !pv.link) { toast('预览链接尚未就绪'); return; }
-    copyText(pv.link, '预览链接已复制');
+    if (!pv || !pv.link) { toast('直链尚未获取，请稍候'); return; }
+    var done = false;
+    function fallback() {
+      var ta = document.createElement('textarea');
+      ta.value = pv.link; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); done = true; } catch (e) {}
+      document.body.removeChild(ta);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(pv.link).then(function(){ toast('直链已复制到剪贴板'); }, function(){ fallback(); toast(done ? '直链已复制到剪贴板' : '复制失败'); });
+    } else {
+      fallback();
+      toast(done ? '直链已复制到剪贴板' : '复制失败');
+    }
   }
   function renderPreviewBody() {
     var pv = state.preview;
@@ -4551,18 +4564,18 @@
       mask.id = 'app-dialog-mask';
       mask.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:99999;display:flex;align-items:center;justify-content:center;';
       var box = document.createElement('div');
-      box.style.cssText = 'background:var(--card-bg,#fff);border-radius:16px;max-width:85%;max-height:70vh;overflow-y:auto;padding:20px;box-shadow:0 8px 32px rgba(0,0,0,.2);';
+      box.style.cssText = 'background:var(--card);border-radius:16px;max-width:85%;max-height:70vh;overflow-y:auto;padding:20px;box-shadow:0 8px 32px rgba(0,0,0,.2);';
       var t = document.createElement('div');
-      t.style.cssText = 'font-size:17px;font-weight:600;margin-bottom:12px;color:var(--fg,#333);';
+      t.style.cssText = 'font-size:17px;font-weight:600;margin-bottom:12px;color:var(--fg);';
       t.textContent = '个人资料';
       var c = document.createElement('div');
-      c.style.cssText = 'font-size:14px;line-height:1.6;color:var(--fg2,#666);white-space:pre-wrap;word-break:break-all;';
+      c.style.cssText = 'font-size:14px;line-height:1.6;color:var(--fg2);white-space:pre-wrap;word-break:break-all;';
       c.textContent = lines.join('\n');
       var row = document.createElement('div');
       row.style.cssText = 'margin-top:16px;';
       var okBtn = document.createElement('button');
       okBtn.textContent = '关闭';
-      okBtn.style.cssText = 'width:100%;padding:10px;border:none;border-radius:10px;background:var(--accent,#2979ff);color:#fff;font-size:15px;';
+      okBtn.style.cssText = 'width:100%;padding:10px;border:none;border-radius:10px;background:var(--accent-bg);color:var(--accent);font-size:15px;';
       okBtn.onclick = function(){ mask.remove(); };
       row.appendChild(okBtn);
       box.appendChild(t); box.appendChild(c); box.appendChild(row);
